@@ -46,25 +46,8 @@ class SpaceONEConnector(BaseConnector):
         }
         self.dispatch(method, params)
 
-    def list_projects(self, domain_id: str):
-        params = {
-            "query": {"filter": [{"k": "tags.domain_id", "v": domain_id, "o": "eq"}]}
-        }
-
-        return self.dispatch("Project.list", params)
-
-    def get_service_account(self, service_account_id):
-        params = {"service_account_id": service_account_id}
-
-        return self.dispatch("ServiceAccount.get", params)
-
-    def update_service_account(self, service_account_id, tags):
-        params = {"service_account_id": service_account_id, "tags": tags}
-
-        return self.dispatch("ServiceAccount.update", params)
-
-    def list_service_accounts(self, project_id: str):
-        params = {"provider": "aws", "project_id": project_id}
+    def list_service_accounts(self, provider: str):
+        params = {"provider": provider}
 
         return self.dispatch("ServiceAccount.list", params)
 

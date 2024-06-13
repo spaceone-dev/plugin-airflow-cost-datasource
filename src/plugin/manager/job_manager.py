@@ -6,7 +6,6 @@ from spaceone.core.manager import BaseManager
 from ..connector.spaceone_connector import SpaceONEConnector
 
 _LOGGER = logging.getLogger(__name__)
-_DEFAULT_DATABASE = "MZC"
 
 
 class JobManager(BaseManager):
@@ -20,6 +19,7 @@ class JobManager(BaseManager):
         domain_id: str,
         options: dict,
         secret_data: dict,
+        linked_accounts: list,
         schema: str = None,
         start: str = None,
         last_synchronized_at: datetime = None,
@@ -28,63 +28,42 @@ class JobManager(BaseManager):
         changed = []
 
         start_month = self._get_start_month(start, last_synchronized_at)
-        self.space_connector.init_client(options, secret_data, schema)
-        response = self.space_connector.list_projects(domain_id)
-        total_count = response.get("total_count") or 0
 
-        if total_count > 0:
-            project_info = response["results"][0]
-            _LOGGER.debug(f"[get_tasks] project info: {project_info}")
+        for linked_account in linked_accounts:
+            account_id = linked_account["account_id"]
+            name = linked_account["name"]
+            data_source_id = linked_account["data_source_id"]
+            v_workspace_id = linked_account["v_workspace_id"]
+            is_sync = linked_account.get("is_sync", "false")
 
-            project_id = project_info["project_id"]
-            database = project_info.get("tags", {}).get("database", _DEFAULT_DATABASE)
+            _LOGGER.debug(f"[get_tasks] account_id: {account_id}, name: {name}")
 
-            response = self.space_connector.list_service_accounts(project_id)
-            for service_account_info in response.get("results", []):
-                service_account_tags = service_account_info.get("tags", {})
-                service_account_id = service_account_info["service_account_id"]
-                service_account_name = service_account_info["name"]
-                account_id = service_account_info["data"]["account_id"]
-                is_sync = service_account_tags.get("is_sync", "false")
-                database = service_account_tags.get("database", database)
+            task_options = {
+                "account_id": account_id,
+                "name": name,
+                "data_source_id": data_source_id,
+                "v_workspace_id": v_workspace_id,
+            }
 
-                if is_sync != "true":
-                    is_sync = "false"
+            if is_sync == "false":
+                first_sync_month = self._get_start_month(start)
+                task_options["start"] = first_sync_month
 
-                _LOGGER.debug(
-                    f"[get_tasks] service_account({service_account_id}): "
-                    f"name={service_account_name}, account_id={account_id}"
+                changed.append(
+                    {
+                        "start": first_sync_month,
+                        "account_id": account_id,
+                    }
                 )
-                task_options = {
-                    "is_sync": is_sync,
-                    "service_account_id": service_account_id,
-                    "service_account_name": service_account_name,
-                    "account_id": account_id,
-                    "database": database,
-                }
+            else:
+                task_options["start"] = start_month
 
-                if is_sync == "false":
-                    first_sync_month = self._get_start_month(start)
-                    task_options["start"] = first_sync_month
+            tasks.append({"task_options": task_options})
 
-                    changed.append(
-                        {
-                            "start": first_sync_month,
-                            "filter": {"additional_info.Account ID": account_id},
-                        }
-                    )
-                else:
-                    task_options["start"] = start_month
+        changed.append({"start": start_month})
 
-                tasks.append({"task_options": task_options})
-
-            changed.append({"start": start_month})
-
-            _LOGGER.debug(f"[get_tasks] tasks: {tasks}")
-            _LOGGER.debug(f"[get_tasks] changed: {changed}")
-
-        else:
-            _LOGGER.debug(f"[get_tasks] no project: tags.domain_id = {domain_id}")
+        _LOGGER.debug(f"[get_tasks] tasks: {tasks}")
+        _LOGGER.debug(f"[get_tasks] changed: {changed}")
 
         return {"tasks": tasks, "changed": changed}
 

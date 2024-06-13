@@ -78,14 +78,45 @@ def job_get_tasks(params: dict) -> dict:
     domain_id = params["domain_id"]
     options = params["options"]
     secret_data = params["secret_data"]
+    linked_accounts = params["linked_accounts"]
     schema = params.get("schema")
     start = params.get("start")
     last_synchronized_at = params.get("last_synchronized_at")
 
     job_mgr = JobManager()
     return job_mgr.get_tasks(
-        domain_id, options, secret_data, schema, start, last_synchronized_at
+        domain_id,
+        options,
+        secret_data,
+        linked_accounts,
+        schema,
+        start,
+        last_synchronized_at,
     )
+
+
+@app.route("Cost.get_linked_accounts")
+def cost_get_linked_accounts(params: dict) -> dict:
+    """Get linked accounts
+
+    Args:
+        params (CostGetLinkedAccountsRequest): {
+            'options': 'dict',      # Required
+            'schema': 'dict,
+            'secret_data': 'dict',  # Required
+            'domain_id': 'str'      # Required
+        }
+
+    Returns:
+        list of linked_accounts
+    """
+    options = params["options"]
+    schema = params.get("schema")
+    secret_data = params["secret_data"]
+    domain_id = params["domain_id"]
+
+    cost_mgr = CostManager()
+    return cost_mgr.get_linked_accounts(options, secret_data, domain_id, schema)
 
 
 @app.route("Cost.get_data")
