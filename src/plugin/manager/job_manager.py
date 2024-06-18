@@ -1,13 +1,10 @@
 import logging
-import json
-import time
 from datetime import datetime, timedelta
 from dateutil import rrule
 
 from spaceone.core.error import *
 from spaceone.core.manager import BaseManager
 from ..connector.spaceone_connector import SpaceONEConnector
-from ..connector.bigquery_connector import BigQueryConnector
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -78,7 +75,6 @@ class JobManager(BaseManager):
 
         _LOGGER.debug(f"[get_tasks] tasks: {tasks}")
         _LOGGER.debug(f"[get_tasks] changed: {changed}")
-        self._save_tasks_info_to_bigquery(task_options)
         return {"tasks": tasks, "changed": changed}
 
     def _get_start_month(self, start, last_synchronized_at=None):
@@ -116,34 +112,3 @@ class JobManager(BaseManager):
             date_ranges.append(billed_month)
 
         return date_ranges
-
-    def _save_tasks_info_to_bigquery(self, tasks):
-        dataset = self.options.get("dataset", "plugin_airflow_cost_datasource")
-        table_name = self.options.get("table", "job_tasks")
-        dataset_id = f"{self.secret_data['project_id']}:{dataset}"
-
-        self.bigquery_connector = BigQueryConnector(
-            options=self.options, secret_data=self.secret_data
-        )
-
-        dataset_ids = [
-            dataset["id"] for dataset in self.bigquery_connector.list_dataset()
-        ]
-        if dataset_id not in dataset_ids:
-            self.bigquery_connector.create_dataset(dataset)
-
-        try:
-            table = self.bigquery_connector.get_table(dataset, table_name)
-            table_id = table["id"]
-        except Exception as e:
-            self.bigquery_connector.create_table_with_schema(dataset, table_name)
-            table_id = f"{dataset_id}.{table_name}"
-
-        json_data = json.dumps(tasks)
-        now = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
-        time_json_data = json.dumps(now, default=str)
-        table_id = table_id.replace(":", ".")
-        rows_to_insert = [{"task_options": json_data, "created_at": time_json_data}]
-
-        time.sleep(5)
-        self.bigquery_connector.insert_rows(table_id, rows_to_insert)

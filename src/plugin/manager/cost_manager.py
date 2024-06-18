@@ -1,4 +1,5 @@
 import logging
+import json
 from typing import Generator
 
 from spaceone.core.manager import BaseManager
@@ -8,6 +9,8 @@ from ..connector.cloud_composer_connector import CloudComposerConnector
 from ..connector.spaceone_connector import SpaceONEConnector
 
 _LOGGER = logging.getLogger("spaceone")
+
+TRIGGER_DAG_NAME = "dags_plugin_connection_test"
 
 
 class CostManager(BaseManager):
@@ -38,10 +41,11 @@ class CostManager(BaseManager):
     ) -> Generator[dict, None, None]:
         for account_id, task_option in task_options.items():
             self._check_task_options(task_option)
+        json_data_str = json.dumps(task_options, default=str)
 
         composer_connector = CloudComposerConnector(options, secret_data, schema)
         execution_info = composer_connector.execute_airflow_command(
-            trigger_dag_name="dags_plugin_connection_test",
+            trigger_dag_name=TRIGGER_DAG_NAME, dict_conf=json_data_str
         )
         _LOGGER.info(f"[get_data] execution_info: {execution_info}")
 
