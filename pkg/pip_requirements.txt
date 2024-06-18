@@ -2,3 +2,5 @@ spaceone-core
 spaceone-api
 spaceone-cost-analysis==2.0.dev127
 pyarrow
+google-api-python-client
+google-cloud-bigquery

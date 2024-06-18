@@ -35,6 +35,8 @@ setup(
         "spaceone-api",
         "spaceone-cost-analysis",
         "pyarrow",
+        "google-api-python-client",
+        "google-cloud-bigquery",
     ],
     zip_safe=False,
 )

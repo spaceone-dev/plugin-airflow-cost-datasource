@@ -1,13 +1,13 @@
 import logging
 from typing import Generator
-from datetime import datetime
-from dateutil import rrule
 
 from spaceone.core.manager import BaseManager
 from spaceone.core.error import *
+
+from ..connector.cloud_composer_connector import CloudComposerConnector
 from ..connector.spaceone_connector import SpaceONEConnector
 
-_LOGGER = logging.getLogger(__name__)
+_LOGGER = logging.getLogger("spaceone")
 
 
 class CostManager(BaseManager):
@@ -36,17 +36,14 @@ class CostManager(BaseManager):
     def get_data(
         self, options: dict, secret_data: dict, task_options: dict, schema: str = None
     ) -> Generator[dict, None, None]:
-        self._check_task_options(task_options)
+        for account_id, task_option in task_options.items():
+            self._check_task_options(task_option)
 
-        start = task_options["start"]
-        account_id = task_options["account_id"]
-        data_source_id = task_options["data_source_id"]
-        workspace_id = task_options["v_workspace_id"]
-        domain_id = task_options["domain_id"]
-
-        date_ranges = self._get_date_range(start)
-
-        # TODO: trigger cloud composer
+        composer_connector = CloudComposerConnector(options, secret_data, schema)
+        execution_info = composer_connector.execute_airflow_command(
+            trigger_dag_name="dags_plugin_connection_test",
+        )
+        _LOGGER.info(f"[get_data] execution_info: {execution_info}")
 
         yield {"results": []}
 
@@ -54,6 +51,9 @@ class CostManager(BaseManager):
     def _check_task_options(task_options):
         if "start" not in task_options:
             raise ERROR_REQUIRED_PARAMETER(key="task_options.start")
+
+        if "date_range" not in task_options:
+            raise ERROR_REQUIRED_PARAMETER(key="task_options.date_range")
 
         if "account_id" not in task_options:
             raise ERROR_REQUIRED_PARAMETER(key="task_options.account_id")
@@ -66,14 +66,3 @@ class CostManager(BaseManager):
 
         if "domain_id" not in task_options:
             raise ERROR_REQUIRED_PARAMETER(key="task_options.domain_id")
-
-    @staticmethod
-    def _get_date_range(start):
-        date_ranges = []
-        start_time = datetime.strptime(start, "%Y-%m")
-        now = datetime.utcnow()
-        for dt in rrule.rrule(rrule.MONTHLY, dtstart=start_time, until=now):
-            billed_month = dt.strftime("%Y-%m")
-            date_ranges.append(billed_month)
-
-        return date_ranges
