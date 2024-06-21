@@ -66,8 +66,6 @@ class JobManager(BaseManager):
             else:
                 task["start"] = start_month
 
-            task["date_range"] = self._get_date_range(task["start"])
-
             task_options[f"{account_id}"] = task
 
         tasks.append({"task_options": task_options})
@@ -101,14 +99,3 @@ class JobManager(BaseManager):
             return datetime.strptime(start_str, date_format)
         except Exception as e:
             raise ERROR_INVALID_PARAMETER_TYPE(key="start", type=date_format)
-
-    @staticmethod
-    def _get_date_range(start):
-        date_ranges = []
-        start_time = datetime.strptime(start, "%Y-%m")
-        now = datetime.utcnow()
-        for dt in rrule.rrule(rrule.MONTHLY, dtstart=start_time, until=now):
-            billed_month = dt.strftime("%Y-%m")
-            date_ranges.append(billed_month)
-
-        return date_ranges

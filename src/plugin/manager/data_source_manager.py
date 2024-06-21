@@ -20,7 +20,7 @@ class DataSourceManager(BaseManager):
                         "conditions_policy": "ALWAYS",
                         "actions": {
                             "match_service_account": {
-                                "source": "labels.Account ID",
+                                "source": "account_id",
                                 "target": "data.account_id",
                             }
                         },

@@ -10,7 +10,7 @@ from ..connector.spaceone_connector import SpaceONEConnector
 
 _LOGGER = logging.getLogger("spaceone")
 
-TRIGGER_DAG_NAME = "dags_plugin_connection_test"
+TRIGGER_DAG_NAME = "dags_create_spaceone_cost_data"
 
 
 class CostManager(BaseManager):
@@ -47,7 +47,9 @@ class CostManager(BaseManager):
         execution_info = composer_connector.execute_airflow_command(
             trigger_dag_name=TRIGGER_DAG_NAME, dict_conf=json_data_str
         )
-        _LOGGER.info(f"[get_data] execution_info: {execution_info}")
+        _LOGGER.info(
+            f"[get_data] trigger dag name: {TRIGGER_DAG_NAME}, execution_info: {execution_info}"
+        )
 
         yield {"results": []}
 
@@ -55,9 +57,6 @@ class CostManager(BaseManager):
     def _check_task_options(task_options):
         if "start" not in task_options:
             raise ERROR_REQUIRED_PARAMETER(key="task_options.start")
-
-        if "date_range" not in task_options:
-            raise ERROR_REQUIRED_PARAMETER(key="task_options.date_range")
 
         if "account_id" not in task_options:
             raise ERROR_REQUIRED_PARAMETER(key="task_options.account_id")
